@@ -293,11 +293,13 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
     color
 }
 
+use print_perf::*;
 
 fn main() {
+    let time = perf!("raytracer");
     let w = 960.0;
     let h = 540.0;
-    let samples_count = 1;
+    let samples_count = 2048;
     let buffer: &mut [u8;3] = &mut [0, 0, 0];
 
     let position = Vec3::new_abc(-22.0, 5.0, 25.0);
@@ -346,4 +348,5 @@ fn main() {
         }).collect();
 
         file.write_all(&bytes).unwrap();
+        time.end();
 }
