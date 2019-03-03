@@ -181,19 +181,19 @@ fn query_database(position: Vec3, hit_type: &mut u8) -> f64 {
         -min(
             box_test(
                 position,
-                Vec3::new_abc(-30, -0.5, -30),
-                Vec3::new_abc(30, 18, 30),
+                Vec3::new_abc(-30.0, -0.5, -30.0),
+                Vec3::new_abc(30.0, 18.0, 30.0),
             ),
             box_test(
                 position,
-                Vec3::new_abc(-25, 17, -25),
-                Vec3::new_abc(25, 20, 25),
+                Vec3::new_abc(-25.0, 17.0, -25.0),
+                Vec3::new_abc(25.0, 20.0, 25.0),
             ),
         ),
         box_test(
             Vec3::new_abc(fmodf(fabsf(position.x), 8.0), position.y, position.z),
-            Vec3::new_abc(1.5, 18.5, -25),
-            Vec3::new_abc(6.5, 20, 25),
+            Vec3::new_abc(1.5, 18.5, -25.0),
+            Vec3::new_abc(6.5, 20.0, 25.0),
         ),
     );
 
@@ -225,9 +225,9 @@ fn ray_marching(origin: Vec3, direction: Vec3, hit_pos: &mut Vec3, hit_norm: &mu
         if d < 0.01 || no_hit_count > 99 {
             
             *hit_norm = !Vec3::new_abc(
-                query_database(*hit_pos + Vec3::new_ab(0.01, 0), &mut no_hit_count) - d,
-                query_database(*hit_pos + Vec3::new_ab(0, 0.01), &mut no_hit_count) - d,
-                query_database(*hit_pos + Vec3::new_abc(0, 0, 0.01), &mut no_hit_count) - d,
+                query_database(*hit_pos + Vec3::new_ab(0.01, 0.0), &mut no_hit_count) - d,
+                query_database(*hit_pos + Vec3::new_ab(0.0, 0.01), &mut no_hit_count) - d,
+                query_database(*hit_pos + Vec3::new_abc(0.0, 0.0, 0.01), &mut no_hit_count) - d,
             );
 
             return hit_type;
@@ -243,7 +243,7 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
     let mut normal = Vec3::from(0.0);
     let mut color = Vec3::from(0.0);
     let mut attenuation = Vec3::from(1.0);
-    let light_direction = !Vec3::new_abc(0.6, 0.6, 1);
+    let light_direction = !Vec3::new_abc(0.6, 0.6, 1.0);
 
     for i in (0..3).rev() {
         let hit_type = ray_marching(origin, direction, &mut sampled_position, &mut normal);
@@ -281,11 +281,11 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
                     &mut normal,
                 ) == HIT_SUN
             {
-                color = color + attenuation * Vec3::new_abc(500, 400, 100) * incidence.into();
+                color = color + attenuation * Vec3::new_abc(500.0, 400.0, 100.0) * incidence.into();
             }
         }
         if hit_type == HIT_SUN {
-            color = color + attenuation * Vec3::new_abc(50, 80, 100);
+            color = color + attenuation * Vec3::new_abc(50.0, 80.0, 100.0);
             break;
         }
     }
