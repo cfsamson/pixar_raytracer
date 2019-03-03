@@ -2,6 +2,8 @@ use std::io::Write;
 use lazy_static::lazy_static;
 use rand::random;
 use std::ops::{Add, Mul, Not, Rem};
+use rayon::prelude::*;
+
 #[derive(Debug, Clone, Copy)]
 struct Vec3 {
     x: f32,
@@ -325,7 +327,7 @@ fn main() {
             }
         }
         
-        let bytes: Vec<u8> = pixels.iter().flat_map(|(y,x)| {
+        let bytes: Vec<u8> = pixels.par_iter().flat_map(|(y,x)| {
                let mut color = Vec3::from(0.0);
                 for _ in (0..samples_count).rev() {
                     
