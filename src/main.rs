@@ -1,11 +1,8 @@
-fn main() {
-    println!("Hello, world!");
-}
-
-use std::ops::{Add, AddAssign, Mul, MulAssign};
-use rand::random;
+use std::io::Write;
 use lazy_static::lazy_static;
-//#[derive(Clone, Copy)]
+use rand::random;
+use std::ops::{Add, Mul, Not, Rem};
+#[derive(Debug, Clone, Copy)]
 struct Vec3 {
     x: f64,
     y: f64,
@@ -17,39 +14,22 @@ impl Vec3 {
         Vec3 { x: v, y: v, z: v }
     }
 
-    fn new_abc(a: impl Into<f64>, b: impl Into<f64>, c: impl Into<f64>) -> Self {
+    fn new_abc(a: f64, b: f64, c: f64) -> Self {
         Vec3 {
             x: a.into(),
             y: b.into(),
             z: c.into(),
         }
     }
-    fn new_ab(a: impl Into<f64>, b: impl Into<f64>) -> Self {
+    fn new_ab(a: f64, b: f64) -> Self {
         Vec3 {
             x: a.into(),
             y: b.into(),
             z: 0.0,
         }
     }
-
-    fn modu(&self, other: &Vec3) -> f64 {
-        self.x * other.x + self.y * other.y + self.z * other.z
-    }
-
-    fn add_b(&self, other: &Vec3) -> Vec3 {
-        Vec3::new_abc(self.x  + other.x, self.y + other.y, self.z + other.z)
-    }
-
-    fn mul_b(&self, other: &Vec3) -> Vec3 {
-        Vec3::new_abc(self.x * other.x, self.y*other.y, self.z * other.z)
-    }
-
-    fn i_sqrt(&self) -> Vec3 {
-        self.mul_b(&Vec3::from(1.0/self.modu(&self)))
-    }
 }
 
-//public static float operator %(Vec q, Vec r) { return q.x * r.x + q.y * r.y + q.z * r.z; }
 
 impl Add for Vec3 {
     type Output = Vec3;
@@ -59,14 +39,6 @@ impl Add for Vec3 {
             y: self.y + other.y,
             z: self.z + other.z,
         }
-    }
-}
-
-impl AddAssign for Vec3 {
-    fn add_assign(&mut self, other: Vec3) {
-        self.x += other.x;
-        self.y += other.y;
-        self.x += other.z;
     }
 }
 
@@ -81,11 +53,17 @@ impl Mul for Vec3 {
     }
 }
 
-impl MulAssign for Vec3 {
-    fn mul_assign(&mut self, other: Vec3) {
-        self.x += other.x;
-        self.y += other.y;
-        self.z += other.z;
+impl Rem for Vec3 {
+    type Output = f64;
+    fn rem(self, other: Vec3) -> f64 {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+}
+
+impl Not for Vec3 {
+    type Output = Vec3;
+    fn not(self) -> Vec3 {
+        self * (1.0 / (self % self).sqrt()).into()
     }
 }
 
@@ -94,9 +72,7 @@ impl From<f64> for Vec3 {
         Vec3::new_abc(n, n, n)
     }
 }
-fn sqrt(q: Vec3) -> Vec3 {
-    q * (1.0 / q.modu(&q).sqrt()).into()
-}
+
 //     public override string ToString() {
 //       var format = ",10:N5"; // 5 decimal spaces, padded to 10 chars in total
 //       return string.Format("{{ x:{0" + format + "}, y:{1" + format + "}, z:{2" + format + "} }}", x, y, z);
@@ -139,16 +115,16 @@ fn sinf(x: f64) -> f64 {
     x.sin()
 }
 
-fn box_test(position: &Vec3, lower_left: &Vec3, upper_right: &Vec3) -> f64 {
-    let lower_left = position.add_b(&lower_left.mul_b(&Vec3::from(-1.0)));
-    let upper_right = upper_right.add_b(&position.mul_b(&Vec3::from(-1.0)));
+fn box_test(position: Vec3, lower_left: Vec3, upper_right: Vec3) -> f64 {
+    let lower_left = position + lower_left * Vec3::from(-1.0);
+    let upper_right = upper_right + position * Vec3::from(-1.0);
 
     -min(
         min(
             min(lower_left.x, upper_right.x),
-            min(lower_left.y, upper_right.y)
+            min(lower_left.y, upper_right.y),
         ),
-        min(lower_left.z, upper_right.z)
+        min(lower_left.z, upper_right.z),
     )
 }
 
@@ -170,164 +146,202 @@ lazy_static! {
     };
 
     static ref CURVES: [Vec3; 2] = {
-        [Vec3::new_abc(-11, 6, 0), Vec3::new_abc(11, 6, 0)]
+        [Vec3::new_abc(-11.0, 6.0, 0.0), Vec3::new_abc(11.0, 6.0, 0.0)]
     };
 }
 
-fn query_database(position: &Vec3, hit_type: u8) -> f64 {
+fn query_database(position: Vec3, hit_type: &mut u8) -> f64 {
     let mut distance = std::f64::MAX;
     let mut f = position;
     f.z = 0.0;
 
     let letter_count = LETTERS.len();
     for i in (0..letter_count).step_by(4) {
-        let begin = Vec3::new_ab(LETTERS[i] - 79, LETTERS[i + 1] - 79) * Vec3::from(0.5);
-        let e = Vec3::new_ab(LETTERS[i + 2] - 79, LETTERS[i+3] - 79).mul(Vec3::from(0.5)).add_b(&begin).mul(Vec3::from(-1.0));
-        let o_part1 =-min((begin.add_b(&f).mul(-1).modu(&e)/&e.modu(&e)),0.0);
-        let o = f.add_b(
-            &begin.add_b(&e)
-            .mul(min(-o_part1 ,1.0).into())
-            .mul(Vec3::from(-1.0)));
-            distance = min(distance, o.modu(&o));
+        let begin = Vec3::new_ab((LETTERS[i] - 79) as f64, (LETTERS[i + 1] - 79)as f64) * Vec3::from(0.5);
+        let e = Vec3::new_ab((LETTERS[i + 2] - 79) as f64, (LETTERS[i + 3] - 79) as f64) * Vec3::from(0.5)
+            + begin * Vec3::from(-1.0);
+        let o_part1 = -min((begin + f * Vec3::from(-1.0)) % e / (e % e), 0.0);
+        let o = f + (begin + e * min(o_part1, 1.0).into()) * Vec3::from(-1.0);
+        distance = min(distance, o % o);
+        
     }
     distance = sqrtf(distance);
-
+    
     for curve in CURVES.iter().rev() {
-        let mut o = f.add_b(curve).mul_b(&Vec3::from(-1.0));
-        let mut temp = 0.0;
-
-        if o.x > 0.0 {
-            temp = fabsf(sqrtf(o.modu(&o)) - 2.0);
-        } else {
-            o.y += if o.y > 0.0 { -2.0 }else {2.0};
-            temp = sqrtf(o.modu(&o));
-        }
+        let o = f + *curve * Vec3::from(-1.0);
+        let temp = if o.x > 0.0 { fabsf(sqrtf(o % o)) - 2.0 } else {  sqrtf(o % o) };
         distance = min(distance, temp);
     }
 
     distance = powf(powf(distance, 8.0) + powf(position.z, 8.0), 0.125) - 0.5;
-    hit_type = HIT_LETTER;
+    *hit_type = HIT_LETTER;
 
-    let mut room_dist = 0.0;
-    room_dist = min(
+    
+    let room_dist = min(
         -min(
-            box_test(&position, &Vec3::new_abc(-30, -0.5, -30), &Vec3::new_abc(30, 18, 30)),
-            box_test(&position, &Vec3::new_abc(-25, 17, -25), &Vec3::new_abc(25, 20, 25))
+            box_test(
+                position,
+                Vec3::new_abc(-30, -0.5, -30),
+                Vec3::new_abc(30, 18, 30),
+            ),
+            box_test(
+                position,
+                Vec3::new_abc(-25, 17, -25),
+                Vec3::new_abc(25, 20, 25),
+            ),
         ),
         box_test(
-            &Vec3::new_abc(fmodf(fabsf(position.x), 8.0), position.y, position.z), 
-            &Vec3::new_abc(1.5, 18.5, -25), 
-            &Vec3::new_abc(6.5, 20, 25))
+            Vec3::new_abc(fmodf(fabsf(position.x), 8.0), position.y, position.z),
+            Vec3::new_abc(1.5, 18.5, -25),
+            Vec3::new_abc(6.5, 20, 25),
+        ),
     );
 
     if room_dist < distance {
         distance = room_dist;
-        hit_type = HIT_WALL;
+        *hit_type = HIT_WALL;
     }
 
     let sun = 19.9 - position.y;
     if sun < distance {
         distance = sun;
-        hit_type = HIT_SUN;
+        *hit_type = HIT_SUN;
     }
 
+    
     distance
 }
 
-
-fn ray_marching(origin: &Vec3, direction: &Vec3, hit_pos: &Vec3, hit_norm: &Vec3) -> u8 {
+fn ray_marching(origin: Vec3, direction: Vec3, hit_pos: &mut Vec3, hit_norm: &mut Vec3) -> u8 {
     let mut hit_type = HIT_NONE;
     let mut no_hit_count = 0;
-    let mut total_d = 0.0; // Option<f64> ??
+    let mut total_d = 0.0; 
 
     while total_d < 100.0 {
-        hit_pos = &origin.add_b(&direction).mul_b(&total_d.into());
-        let d = query_database(hit_pos, hit_type);
+        *hit_pos = origin + direction * total_d.into();
+        let d = query_database(*hit_pos, &mut hit_type);
+        
         no_hit_count += 1;
         if d < 0.01 || no_hit_count > 99 {
-            hit_norm = &Vec3::new_abc(
-                query_database(&hit_pos.add_b(&Vec3::new_ab(0.1, 0)), no_hit_count) - d, 
-                query_database(&hit_pos.add_b(&Vec3::new_ab(0, 0.1)), no_hit_count) - d, 
-                query_database(&hit_pos.add_b(&Vec3::new_abc(0, 0, 0.01)), no_hit_count) - d
-                ).i_sqrt();
-                return hit_type;
-        } // !
+            
+            *hit_norm = !Vec3::new_abc(
+                query_database(*hit_pos + Vec3::new_ab(0.01, 0), &mut no_hit_count) - d,
+                query_database(*hit_pos + Vec3::new_ab(0, 0.01), &mut no_hit_count) - d,
+                query_database(*hit_pos + Vec3::new_abc(0, 0, 0.01), &mut no_hit_count) - d,
+            );
+
+            return hit_type;
+        }
+        total_d += d;
     }
 
     0
 }
 
-
-fn trace(mut origin: &Vec3, mut direction: &Vec3) -> Vec3 {
-    let sampled_position = Vec3::from(0.0);
-    let normal = Vec3::from(0.0);
-    let color = Vec3::from(0.0);
-    let attenuation = Vec3::from(1.0);
-    let ligt_direction = Vec3::new_abc(0.6, 0.6, 1).i_sqrt();
+fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
+    let mut sampled_position = Vec3::from(0.0);
+    let mut normal = Vec3::from(0.0);
+    let mut color = Vec3::from(0.0);
+    let mut attenuation = Vec3::from(1.0);
+    let light_direction = !Vec3::new_abc(0.6, 0.6, 1);
 
     for i in (0..3).rev() {
-        let hit_type = ray_marching(&origin, &direction, &sampled_position, &normal);
-        if hit_type == HIT_NONE { break; }
+        let hit_type = ray_marching(origin, direction, &mut sampled_position, &mut normal);
+        if hit_type == HIT_NONE {
+            break;
+        }
         if hit_type == HIT_LETTER {
-            direction = &direction.add_b(&normal).mul_b(&(normal.modu(&direction) * -2.0).into());
-            origin = &sampled_position.add_b(&direction).mul_b(&Vec3::from(0.1));
-            attenuation = attenuation.mul_b(&Vec3::from(0.2));
+            direction = direction + normal * ((normal % direction) * -2.0).into();
+            origin = sampled_position + direction * Vec3::from(0.1);
+            attenuation = attenuation * Vec3::from(0.2);
         }
         if hit_type == HIT_WALL {
-            let incidence = normal.modu(&ligt_direction);
+            let incidence = normal % light_direction;
             let p = 6.283185 * random_val();
             let c = random_val();
             let s = sqrtf(1.0 - c);
-            let g = if normal.z < 0 {-1.0} else {1.0};
-            let u = -1.0/(g+normal.z);
+            let g = if normal.z < 0.0 { -1.0 } else { 1.0 };
+            let u = -1.0 / (g + normal.z);
             let v = normal.x * normal.y * u;
-            direction = Vec3::
+            
+            direction = Vec3::new_abc(v, g + normal.y * normal.y * u, -normal.y)
+                * cosf(p).into()
+                * s.into()
+                + Vec3::new_abc(1.0 + g * normal.x * normal.x * u, g * v, -g * normal.x)
+                    * (Vec3::from(sinf(p)) * Vec3::from(s))
+                + Vec3::from(normal) * sqrtf(c).into();
+            origin = sampled_position + direction * Vec3::from(0.1);
+            attenuation = attenuation * Vec3::from(0.2);
+
+            if incidence > 0.0
+                && ray_marching(
+                    sampled_position + normal * Vec3::from(0.1),
+                    light_direction,
+                    &mut sampled_position,
+                    &mut normal,
+                ) == HIT_SUN
+            {
+                color = color + attenuation * Vec3::new_abc(500, 400, 100) * incidence.into();
+            }
+        }
+        if hit_type == HIT_SUN {
+            color = color + attenuation * Vec3::new_abc(50, 80, 100);
+            break;
         }
     }
 
-    unimplemented!()
+    color
 }
 
-//                     direction = Vec(v,
-//                                     g + normal.y * normal.y * u,
-//                                     -normal.y) * (cosf(p) * s)
-//                                 +
-//                                 Vec(1 + g * normal.x * normal.x * u,
-//                                     g * v,
-//                                     -g * normal.x) * (sinf(p) * s) + normal * sqrtf(c);
-//                     origin = sampledPosition + direction * .1f;
-//                     attenuation = attenuation * 0.2f;
-//                     if (incidence > 0 &&
-//                         RayMarching(sampledPosition + normal * .1f,
-//                                     lightDirection,
-//                                     ref sampledPosition,
-//                                     ref normal) == HIT_SUN)
-//                         color = color + attenuation * Vec(500, 400, 100) * incidence;
-//                 }
-//                 if (hitType == HIT_SUN)
-//                 { //
-//                     color = color + attenuation * Vec(50, 80, 100); break; // Sun Color
-//                 }
-//             }
-//             return color;
-//         }
 
+fn main() {
+    let w = 960.0;
+    let h = 540.0;
+    let samples_count = 2;
+    let buffer: &mut [u8;3] = &mut [0, 0, 0];
 
+    let position = Vec3::new_abc(-22.0, 5.0, 25.0);
+    let goal = !(Vec3::new_abc(-3.0, 4.0, 0.0) + position * Vec3::from(-1.0));
+    let left = !Vec3::new_abc(goal.z, 0.0, -goal.x) * (1.0/w).into();
+    
+    let up = Vec3::new_abc(
+        goal.y * left.z - goal.z * left.y, 
+        goal.z * left.x - goal.x * left.z, 
+        goal.x * left.y - goal.y * left.x
+        );
 
-// ???
-// macro_rules! letters {
-//     () => { {
-//         let x: String =  [
-//             "5O5_", "5W9W", "5_9_",        // P (without curve)
-//                 "AOEO", "COC_", "A_E_",        // I
-//                 "IOQ_", "I_QO",               // X
-//                 "UOY_", "Y_]O", "WW[W",        // A
-//                 "aOa_", "aWeW", "a_e_", "cWiO"
-//             ].concat();
-//         x.chars().map(|c| c).collect::<Vec<char>>()
-//         }
-//     };
-// }
+        let filename = String::from("output-rust.ppm");
+        println!("Width: = {}, Height: = {}, Samples = {}", w, h, samples_count);
+        println!("Writing data to {}", filename);
 
+        let mut file = std::fs::File::create(filename).unwrap();
+        
+        let header: String = format!("P6 {} {} 255 ", w, h);
+        let ascii_header = header.to_ascii_uppercase();
+        file.write_all(ascii_header.as_bytes()).unwrap();
 
+        for y in (0..h as u64).rev() {
+            for x in (0..w as u64).rev() {
+                let mut color = Vec3::from(0.0);
+                for _ in (0..samples_count).rev() {
+                    
+                    color = color + trace(
+                        position, 
+                        !(goal + left * (x as f64-w/2.0+random_val()).into() + up * (y as f64-h/2.0+random_val()).into())
+                        );
+                    
+                }
 
+                color = color * (1.0 / f64::from(samples_count)).into() + (14.0 / 241.0).into();
+                
+                let o: Vec3 = color + Vec3::from(1.0);
+                color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z) * Vec3::from(255.0);
+
+                buffer[0] = color.x as u8;
+                buffer[1] = color.y as u8;
+                buffer[2] = color.z as u8;
+                
+                file.write_all(buffer).unwrap();
+            }
+        } 
+}
