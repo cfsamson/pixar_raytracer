@@ -4,24 +4,24 @@ use rand::random;
 use std::ops::{Add, Mul, Not, Rem};
 #[derive(Debug, Clone, Copy)]
 struct Vec3 {
-    x: f64,
-    y: f64,
-    z: f64,
+    x: f32,
+    y: f32,
+    z: f32,
 }
 
 impl Vec3 {
-    fn new(v: f64) -> Self {
+    fn new(v: f32) -> Self {
         Vec3 { x: v, y: v, z: v }
     }
 
-    fn new_abc(a: f64, b: f64, c: f64) -> Self {
+    fn new_abc(a: f32, b: f32, c: f32) -> Self {
         Vec3 {
             x: a.into(),
             y: b.into(),
             z: c.into(),
         }
     }
-    fn new_ab(a: f64, b: f64) -> Self {
+    fn new_ab(a: f32, b: f32) -> Self {
         Vec3 {
             x: a.into(),
             y: b.into(),
@@ -54,8 +54,8 @@ impl Mul for Vec3 {
 }
 
 impl Rem for Vec3 {
-    type Output = f64;
-    fn rem(self, other: Vec3) -> f64 {
+    type Output = f32;
+    fn rem(self, other: Vec3) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 }
@@ -67,8 +67,8 @@ impl Not for Vec3 {
     }
 }
 
-impl From<f64> for Vec3 {
-    fn from(n: f64) -> Vec3 {
+impl From<f32> for Vec3 {
+    fn from(n: f32) -> Vec3 {
         Vec3::new_abc(n, n, n)
     }
 }
@@ -79,7 +79,7 @@ impl From<f64> for Vec3 {
 //     }
 //   }
 
-fn min(l: f64, r: f64) -> f64 {
+fn min(l: f32, r: f32) -> f32 {
     if l < r {
         l
     } else {
@@ -87,35 +87,35 @@ fn min(l: f64, r: f64) -> f64 {
     }
 }
 
-fn random_val() -> f64 {
+fn random_val() -> f32 {
     random()
 }
 
-fn fmodf(x: f64, y: f64) -> f64 {
+fn fmodf(x: f32, y: f32) -> f32 {
     x % y
 }
 
-fn fabsf(x: f64) -> f64 {
+fn fabsf(x: f32) -> f32 {
     x.abs()
 }
 
-fn sqrtf(x: f64) -> f64 {
+fn sqrtf(x: f32) -> f32 {
     x.sqrt()
 }
 
-fn powf(x: f64, y: f64) -> f64 {
+fn powf(x: f32, y: f32) -> f32 {
     x.powf(y)
 }
 
-fn cosf(x: f64) -> f64 {
+fn cosf(x: f32) -> f32 {
     x.cos()
 }
 
-fn sinf(x: f64) -> f64 {
+fn sinf(x: f32) -> f32 {
     x.sin()
 }
 
-fn box_test(position: Vec3, lower_left: Vec3, upper_right: Vec3) -> f64 {
+fn box_test(position: Vec3, lower_left: Vec3, upper_right: Vec3) -> f32 {
     let lower_left = position + lower_left * Vec3::from(-1.0);
     let upper_right = upper_right + position * Vec3::from(-1.0);
 
@@ -150,15 +150,15 @@ lazy_static! {
     };
 }
 
-fn query_database(position: Vec3, hit_type: &mut u8) -> f64 {
-    let mut distance = std::f64::MAX;
+fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
+    let mut distance = std::f32::MAX;
     let mut f = position;
     f.z = 0.0;
 
     let letter_count = LETTERS.len();
     for i in (0..letter_count).step_by(4) {
-        let begin = Vec3::new_ab((LETTERS[i] - 79) as f64, (LETTERS[i + 1] - 79)as f64) * Vec3::from(0.5);
-        let e = Vec3::new_ab((LETTERS[i + 2] - 79) as f64, (LETTERS[i + 3] - 79) as f64) * Vec3::from(0.5)
+        let begin = Vec3::new_ab((LETTERS[i] - 79) as f32, (LETTERS[i + 1] - 79)as f32) * Vec3::from(0.5);
+        let e = Vec3::new_ab((LETTERS[i + 2] - 79) as f32, (LETTERS[i + 3] - 79) as f32) * Vec3::from(0.5)
             + begin * Vec3::from(-1.0);
         let o_part1 = -min((begin + f * Vec3::from(-1.0)) % e / (e % e), 0.0);
         let o = f + (begin + e * min(o_part1, 1.0).into()) * Vec3::from(-1.0);
@@ -327,12 +327,12 @@ fn main() {
                     
                     color = color + trace(
                         position, 
-                        !(goal + left * (x as f64-w/2.0+random_val()).into() + up * (y as f64-h/2.0+random_val()).into())
+                        !(goal + left * (x as f32-w/2.0+random_val()).into() + up * (y as f32-h/2.0+random_val()).into())
                         );
                     
                 }
 
-                color = color * (1.0 / f64::from(samples_count)).into() + (14.0 / 241.0).into();
+                color = color * (1.0 / samples_count as f32).into() + (14.0 / 241.0).into();
                 
                 let o: Vec3 = color + Vec3::from(1.0);
                 color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z) * Vec3::from(255.0);
