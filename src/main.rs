@@ -128,7 +128,7 @@ const HIT_WALL: u8 = 2;
 const HIT_SUN: u8 = 3;
 
 lazy_static! {
-    static ref LETTERS: Vec<i32> = {
+    static ref LETTER_BLOCKS: Vec<(i32,i32,i32,i32)> = {
         let x: String =  [
                 "5O5_", "5W9W", "5_9_",         // P (without curve)
                 "AOEO", "COC_", "A_E_",         // I
@@ -136,7 +136,12 @@ lazy_static! {
                 "UOY_", "Y_]O", "WW[W",         // A
                 "aOa_", "aWeW", "a_e_", "cWiO"  // R (without curve)
             ].concat();
-        x.chars().map(|c| c as i32).collect::<Vec<i32>>()
+        let mut blocks: Vec<(i32, i32,i32,i32)> = vec![];
+        let chs: Vec<i32> = x.chars().map(|c| c as i32).collect();
+        for i in (0..x.len()).step_by(4) {
+            blocks.push((chs[i], chs[i+1], chs[i+2], chs[i+3]))
+        }
+        blocks
     };
 
     static ref CURVES: [Vec3; 2] = {
@@ -149,10 +154,9 @@ fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
     let mut f = position;
     f.z = 0.0;
 
-    let letter_count = LETTERS.len();
-    for i in (0..letter_count).step_by(4) {
-        let begin = Vec3::new_ab((LETTERS[i] - 79) as f32, (LETTERS[i + 1] - 79)as f32) * Vec3::from(0.5);
-        let e = Vec3::new_ab((LETTERS[i + 2] - 79) as f32, (LETTERS[i + 3] - 79) as f32) * Vec3::from(0.5)
+    for (a, b,c,d) in LETTER_BLOCKS.iter() {
+        let begin = Vec3::new_ab((a - 79) as f32, (b - 79)as f32) * Vec3::from(0.5);
+        let e = Vec3::new_ab((c - 79) as f32, (d - 79) as f32) * Vec3::from(0.5)
             + begin * Vec3::from(-1.0);
         let o_part1 = -min((begin + f * Vec3::from(-1.0)) % e / (e % e), 0.0);
         let o = f + (begin + e * min(o_part1, 1.0).into()) * Vec3::from(-1.0);
@@ -163,11 +167,11 @@ fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
     
     for curve in CURVES.iter().rev() {
         let o = f + *curve * Vec3::from(-1.0);
-        let temp = if o.x > 0.0 { fabsf(sqrtf(o % o)) - 2.0 } else {  sqrtf(o % o) };
+        let temp = if o.x > 0.0 {fabsf(sqrtf(o % o)) - 2.0 } else {  sqrtf(o % o) };
         distance = min(distance, temp);
     }
 
-    distance = powf(powf(distance, 8.0) + powf(position.z, 8.0), 0.125) - 0.5;
+    distance = powf(distance.powi(8) + position.z.powi(8), 0.125) - 0.5;
     *hit_type = HIT_LETTER;
 
     
@@ -330,12 +334,7 @@ fn main() {
                 
                 let o: Vec3 = color + Vec3::from(1.0);
                 color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z) * Vec3::from(255.0);
-
-                buffer[0] = color.x as u8;
-                buffer[1] = color.y as u8;
-                buffer[2] = color.z as u8;
-                
-                file.write_all(buffer).unwrap();
+                file.write_all(&[color.x as u8, color.y as u8, color.z as u8]).unwrap();
             }
         } 
 }
