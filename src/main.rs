@@ -73,7 +73,6 @@ impl From<f32> for Vec3 {
     }
 }
 
-#[inline(always)]
 fn min(l: f32, r: f32) -> f32 {
     if l < r {
         l
@@ -82,37 +81,30 @@ fn min(l: f32, r: f32) -> f32 {
     }
 }
 
-#[inline(always)]
 fn random_val() -> f32 {
     random()
 }
 
-#[inline(always)]
 fn fmodf(x: f32, y: f32) -> f32 {
     x % y
 }
 
-#[inline(always)]
 fn fabsf(x: f32) -> f32 {
     x.abs()
 }
 
-#[inline(always)]
 fn sqrtf(x: f32) -> f32 {
     x.sqrt()
 }
 
-#[inline(always)]
 fn powf(x: f32, y: f32) -> f32 {
     x.powf(y)
 }
 
-#[inline(always)]
 fn cosf(x: f32) -> f32 {
     x.cos()
 }
 
-#[inline(always)]
 fn sinf(x: f32) -> f32 {
     x.sin()
 }
@@ -138,11 +130,11 @@ const HIT_SUN: u8 = 3;
 lazy_static! {
     static ref LETTERS: Vec<i32> = {
         let x: String =  [
-            "5O5_", "5W9W", "5_9_",        // P (without curve)
-                "AOEO", "COC_", "A_E_",        // I
-                "IOQ_", "I_QO",               // X
-                "UOY_", "Y_]O", "WW[W",        // A
-                "aOa_", "aWeW", "a_e_", "cWiO"
+                "5O5_", "5W9W", "5_9_",         // P (without curve)
+                "AOEO", "COC_", "A_E_",         // I
+                "IOQ_", "I_QO",                 // X
+                "UOY_", "Y_]O", "WW[W",         // A
+                "aOa_", "aWeW", "a_e_", "cWiO"  // R (without curve)
             ].concat();
         x.chars().map(|c| c as i32).collect::<Vec<i32>>()
     };
@@ -215,6 +207,7 @@ fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
 }
 
 fn ray_marching(origin: Vec3, direction: Vec3, hit_pos: &mut Vec3, hit_norm: &mut Vec3) -> u8 {
+    
     let mut hit_type = HIT_NONE;
     let mut no_hit_count = 0;
     let mut total_d = 0.0; 
@@ -236,7 +229,6 @@ fn ray_marching(origin: Vec3, direction: Vec3, hit_pos: &mut Vec3, hit_norm: &mu
         }
         total_d += d;
     }
-
     0
 }
 
@@ -299,7 +291,7 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
 fn main() {
     let w = 960.0;
     let h = 540.0;
-    let samples_count = 2048;
+    let samples_count = 1;
     let buffer: &mut [u8;3] = &mut [0, 0, 0];
 
     let position = Vec3::new_abc(-22.0, 5.0, 25.0);
