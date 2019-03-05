@@ -196,7 +196,6 @@ fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
         distance = sun;
         *hit_type = HIT_SUN;
     }
-
     distance
 }
 
@@ -275,7 +274,6 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
             break;
         }
     }
-
     color
 }
 
