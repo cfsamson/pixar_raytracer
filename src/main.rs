@@ -303,51 +303,35 @@ fn main() {
     let mut file = std::fs::File::create(filename).unwrap();
     write!(file, "P6 {} {} 255 ", w, h).unwrap();
 
-    // first we create a range iterator over y-coordinates
-    let bytes: Vec<u8> = (0..h as u32)
+    let width = w as u32;
+    let bytes: Vec<u8> = (0..h as u32 * width)
         // turn it in to a parallel iterator
         .into_par_iter()
         // reverse the order in which we iterate so our picture doesn't end upside down
         .rev()
-        // mapping each y-coordinate to an iterator ower x-coordinates
-        // then we flatten the result so we don't end up with a Vec of y coordinates
-        // where each element is a Vec of x-coordinates.
-        .flat_map(|y| -> Vec<u8> {
-            // this is our sub-iterator that iterates ower x-coordinates
-            (0..w as u32)
-                // we parallelize this too
-                .into_par_iter()
-                // reverse the order so our picture doesn't end upside down
-                .rev()
-                // again we map this to a sub iterator so we don't end up with a
-                // Vec of y-coordinates, where each element is a Vec of
-                // x-coordinates, that in turn is av Vec of 3 u8 color bytes.
-                // Instead we get a "flattened" result of only u8 color bytes.
-                .flat_map(|x| {
-                    let mut color = Vec3::from(0.0);
-                    for _ in (0..samples_count).rev() {
-                        color = color
-                            + trace(
-                                position,
-                                !(goal
-                                    + left * (x as f32 - w / 2.0 + random_val()).into()
-                                    + up * (y as f32 - h / 2.0 + random_val()).into()),
-                            );
-                    }
+        .flat_map(|idx| {
+            // determine the x- and y-coordinates based on the index in row-major order
+            // https://en.wikipedia.org/wiki/Row-major_order
+            let y = (idx / width) as f32;
+            let x = (idx % width) as f32;
+            let mut color = Vec3::from(0.0);
+            for _ in (0..samples_count).rev() {
+                color = color
+                    + trace(
+                        position,
+                        !(goal
+                            + left * (x - w / 2.0 + random_val()).into()
+                            + up * (y - h / 2.0 + random_val()).into()),
+                    );
+            }
 
-                    color = color * (1.0 / samples_count as f32).into() + (14.0 / 241.0).into();
+            color = color * (1.0 / samples_count as f32).into() + (14.0 / 241.0).into();
 
-                    let o: Vec3 = color + Vec3::from(1.0);
-                    color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z)
-                        * Vec3::from(255.0);
-                    // we map each iteration of the x-coordinate to this Vec<u8>. Since
-                    // Vec is an iterable our flat_map method wil flatten it out for us
-                    vec![color.x as u8, color.y as u8, color.z as u8]
-                })
-                // we collect this to a Vec<u8> which is iterable so our inner flat_map 
-                // method returns an iterable so the outer flat_map 
-                // can take care of flattening everything for us
-                .collect()
+            let o: Vec3 = color + Vec3::from(1.0);
+            color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z) * Vec3::from(255.0);
+            // we map each iteration of the x-coordinate to this Vec<u8>. Since
+            // Vec is an iterable our flat_map method wil flatten it out for us
+            vec![color.x as u8, color.y as u8, color.z as u8]
         })
         .collect();
 
