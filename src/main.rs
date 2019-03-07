@@ -302,11 +302,26 @@ fn main() {
     let mut file = std::fs::File::create(filename).unwrap();
     write!(file, "P6 {} {} 255 ", w, h).unwrap();
 
-    let bytes: Vec<u8> = (0..h as u64)
+    // first we create a range iterator ower
+    let bytes: Vec<u8> = (0..h as u32)
+        // turn it in to a parrallell iterator
         .into_par_iter()
+        // reverse the order in which we iterate so our picture doesn't end upside down
+        .rev()
+        // mapping each y-coordinate to an iterator ower x-coordinates
+        // then we flatten the result so we don't end up with a Vec of y coordinates
+        // where each element is a Vec of x-coordinates.
         .flat_map(|y| -> Vec<u8> {
-            (0..w as u64)
+            // this is our sub-iterator that iterates ower x-coordinates
+            (0..w as u32)
+                // we parrallellize this too
                 .into_par_iter()
+                // reverse the order so our picture doesn't end upside down
+                .rev()
+                // again we map this to a sub iterator so we don't end up with a
+                // Vec of y-coordinates, where each element if the Vec is a Vec of
+                // x-coordinates, that in turn is av Vec of 3 u8 color bytes.
+                // Instead we get a "flattened" result of only u8 color bytes.
                 .flat_map(|x| {
                     let mut color = Vec3::from(0.0);
                     for _ in (0..samples_count).rev() {
@@ -326,6 +341,8 @@ fn main() {
                         * Vec3::from(255.0);
                     vec![color.x as u8, color.y as u8, color.z as u8]
                 })
+                // we collect this to a Vec<u8> which is Iterable so our flat_map 
+                // method can take care of flattening everything for us
                 .collect()
         })
         .collect();
