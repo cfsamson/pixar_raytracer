@@ -304,7 +304,7 @@ fn main() {
 
     // first we create a range iterator over y-coordinates
     let bytes: Vec<u8> = (0..h as u32)
-        // turn it in to a parallell iterator
+        // turn it in to a parallel iterator
         .into_par_iter()
         // reverse the order in which we iterate so our picture doesn't end upside down
         .rev()
@@ -314,7 +314,7 @@ fn main() {
         .flat_map(|y| -> Vec<u8> {
             // this is our sub-iterator that iterates ower x-coordinates
             (0..w as u32)
-                // we parallellize this too
+                // we parallelize this too
                 .into_par_iter()
                 // reverse the order so our picture doesn't end upside down
                 .rev()
