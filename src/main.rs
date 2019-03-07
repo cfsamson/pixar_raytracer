@@ -302,32 +302,31 @@ fn main() {
     let mut file = std::fs::File::create(filename).unwrap();
     write!(file, "P6 {} {} 255 ", w, h).unwrap();
 
-    let mut pixels: Vec<(f32, f32)> = vec![];
-    for y in (0..h as u64).rev() {
-        for x in (0..w as u64).rev() {
-            pixels.push((y as f32, x as f32));
-        }
-    }
+    let bytes: Vec<u8> = (0..h as u64)
+        .into_par_iter()
+        .flat_map(|y| -> Vec<u8> {
+            (0..w as u64)
+                .into_par_iter()
+                .flat_map(|x| {
+                    let mut color = Vec3::from(0.0);
+                    for _ in (0..samples_count).rev() {
+                        color = color
+                            + trace(
+                                position,
+                                !(goal
+                                    + left * (x as f32 - w / 2.0 + random_val()).into()
+                                    + up * (y as f32 - h / 2.0 + random_val()).into()),
+                            );
+                    }
 
-    let bytes: Vec<u8> = pixels
-        .par_iter()
-        .flat_map(|(y, x)| {
-            let mut color = Vec3::from(0.0);
-            for _ in (0..samples_count).rev() {
-                color = color
-                    + trace(
-                        position,
-                        !(goal
-                            + left * (*x - w / 2.0 + random_val()).into()
-                            + up * (*y - h / 2.0 + random_val()).into()),
-                    );
-            }
+                    color = color * (1.0 / samples_count as f32).into() + (14.0 / 241.0).into();
 
-            color = color * (1.0 / samples_count as f32).into() + (14.0 / 241.0).into();
-
-            let o: Vec3 = color + Vec3::from(1.0);
-            color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z) * Vec3::from(255.0);
-            vec![color.x as u8, color.y as u8, color.z as u8]
+                    let o: Vec3 = color + Vec3::from(1.0);
+                    color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z)
+                        * Vec3::from(255.0);
+                    vec![color.x as u8, color.y as u8, color.z as u8]
+                })
+                .collect()
         })
         .collect();
 
