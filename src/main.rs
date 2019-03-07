@@ -154,10 +154,11 @@ fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
     distance = sqrtf(distance);
 
     for curve in CURVES.iter().rev() {
-        let o = f + *curve * Vec3::from(-1.0);
+        let mut o = f + *curve * Vec3::from(-1.0);
         let temp = if o.x > 0.0 {
-            fabsf(sqrtf(o % o)) - 2.0
+            fabsf(sqrtf(o % o) - 2.0)
         } else {
+            o.y += if o.y > 0.0 { -2.0 } else { 2.0 };
             sqrtf(o % o)
         };
         distance = min(distance, temp);
