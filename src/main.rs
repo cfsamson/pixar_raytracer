@@ -302,7 +302,7 @@ fn main() {
     let mut file = std::fs::File::create(filename).unwrap();
     write!(file, "P6 {} {} 255 ", w, h).unwrap();
 
-    // first we create a range iterator ower
+    // first we create a range iterator over y-coordinates
     let bytes: Vec<u8> = (0..h as u32)
         // turn it in to a parallell iterator
         .into_par_iter()
@@ -319,7 +319,7 @@ fn main() {
                 // reverse the order so our picture doesn't end upside down
                 .rev()
                 // again we map this to a sub iterator so we don't end up with a
-                // Vec of y-coordinates, where each element if the Vec is a Vec of
+                // Vec of y-coordinates, where each element is a Vec of
                 // x-coordinates, that in turn is av Vec of 3 u8 color bytes.
                 // Instead we get a "flattened" result of only u8 color bytes.
                 .flat_map(|x| {
@@ -339,10 +339,13 @@ fn main() {
                     let o: Vec3 = color + Vec3::from(1.0);
                     color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z)
                         * Vec3::from(255.0);
+                    // we map each iteration of the x-coordinate to this Vec<u8>. Since
+                    // Vec is an iterable our flat_map method wil flatten it out for us
                     vec![color.x as u8, color.y as u8, color.z as u8]
                 })
-                // we collect this to a Vec<u8> which is Iterable so our flat_map 
-                // method can take care of flattening everything for us
+                // we collect this to a Vec<u8> which is iterable so our inner flat_map 
+                // method returns an iterable so the outer flat_map 
+                // can take care of flattening everything for us
                 .collect()
         })
         .collect();
