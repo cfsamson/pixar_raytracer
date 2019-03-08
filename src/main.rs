@@ -233,7 +233,7 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
     let mut attenuation = Vec3::from(1.0);
     let light_direction = !Vec3::new_abc(0.6, 0.6, 1.0);
 
-    for _ in (0..3).rev() {
+    for _ in (0..3) {
         let hit_type = ray_marching(origin, direction, &mut sampled_position, &mut normal);
         if hit_type == HIT_NONE {
             break;
@@ -318,7 +318,7 @@ fn main() {
             let y = (idx / w as usize) as f32;
             let x = (idx % w as usize) as f32;
             let mut color = Vec3::from(0.0);
-            for _ in (0..samples_count).rev() {
+            for _ in (0..samples_count) {
                 color = color
                     + trace(
                         position,
