@@ -309,6 +309,7 @@ fn main() {
     bytes
         .par_chunks_mut(BYTES_PER_PIXEL)
         .into_par_iter()
+        // reverse the order in which we iterate so our picture doesn't end upside down
         .rev()
         .enumerate()
         .for_each(|(idx, chunk)| {
