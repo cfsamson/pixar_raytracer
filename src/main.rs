@@ -3,12 +3,6 @@ use rand::random;
 use rayon::prelude::*;
 use std::io::Write;
 use std::ops::{Add, Mul, Not, Rem};
-<<<<<<< HEAD
-use rayon::prelude::*;
-=======
->>>>>>> 7f7720b0ffe817006c372875a9c43f8190c6a76c
-
-const BYTES_PER_PIXEL: usize = 3;
 
 #[derive(Debug, Clone, Copy)]
 struct Vec3 {
@@ -237,7 +231,7 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
     let mut attenuation = Vec3::from(1.0);
     let light_direction = !Vec3::new_abc(0.6, 0.6, 1.0);
 
-    for _ in (0..3) {
+    for _ in 0..3 {
         let hit_type = ray_marching(origin, direction, &mut sampled_position, &mut normal);
         if hit_type == HIT_NONE {
             break;
@@ -284,6 +278,7 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
     color
 }
 
+const BYTES_PER_PIXEL: usize = 3;
 fn main() {
     let w = 960.0;
     let h = 540.0;
@@ -322,7 +317,7 @@ fn main() {
             let y = (idx / w as usize) as f32;
             let x = (idx % w as usize) as f32;
             let mut color = Vec3::from(0.0);
-            for _ in (0..samples_count) {
+            for _ in 0..samples_count {
                 color = color
                     + trace(
                         position,
@@ -337,7 +332,7 @@ fn main() {
             let o: Vec3 = color + Vec3::from(1.0);
             color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z) * Vec3::from(255.0);
             // we map each iteration of the x-coordinate to this Vec<u8>. Since
-            // Vec is an iterable our flat_map method wil flatten it out for us
+            // Vec is an iterable our flat_map method will flatten it out for us
             chunk[0] = color.x as u8;
             chunk[1] = color.y as u8;
             chunk[2] = color.z as u8;
