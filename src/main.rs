@@ -1,8 +1,12 @@
-use std::io::Write;
 use lazy_static::lazy_static;
 use rand::random;
-use std::ops::{Add, Mul, Not, Rem};
 use rayon::prelude::*;
+use std::io::Write;
+use std::ops::{Add, Mul, Not, Rem};
+<<<<<<< HEAD
+use rayon::prelude::*;
+=======
+>>>>>>> 7f7720b0ffe817006c372875a9c43f8190c6a76c
 
 #[derive(Debug, Clone, Copy)]
 struct Vec3 {
@@ -12,26 +16,13 @@ struct Vec3 {
 }
 
 impl Vec3 {
-    fn new(v: f32) -> Self {
-        Vec3 { x: v, y: v, z: v }
-    }
-
     fn new_abc(a: f32, b: f32, c: f32) -> Self {
-        Vec3 {
-            x: a.into(),
-            y: b.into(),
-            z: c.into(),
-        }
+        Vec3 { x: a, y: b, z: c }
     }
     fn new_ab(a: f32, b: f32) -> Self {
-        Vec3 {
-            x: a.into(),
-            y: b.into(),
-            z: 0.0,
-        }
+        Vec3 { x: a, y: b, z: 0.0 }
     }
 }
-
 
 impl Add for Vec3 {
     type Output = Vec3;
@@ -156,27 +147,30 @@ fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
     let mut f = position;
     f.z = 0.0;
 
-    for (a, b,c,d) in LETTER_BLOCKS.iter() {
-        let begin = Vec3::new_ab((a - 79) as f32, (b - 79)as f32) * Vec3::from(0.5);
+    for (a, b, c, d) in LETTER_BLOCKS.iter() {
+        let begin = Vec3::new_ab((a - 79) as f32, (b - 79) as f32) * Vec3::from(0.5);
         let e = Vec3::new_ab((c - 79) as f32, (d - 79) as f32) * Vec3::from(0.5)
             + begin * Vec3::from(-1.0);
         let o_part1 = -min((begin + f * Vec3::from(-1.0)) % e / (e % e), 0.0);
         let o = f + (begin + e * min(o_part1, 1.0).into()) * Vec3::from(-1.0);
         distance = min(distance, o % o);
-        
     }
     distance = sqrtf(distance);
-    
+
     for curve in CURVES.iter().rev() {
-        let o = f + *curve * Vec3::from(-1.0);
-        let temp = if o.x > 0.0 {fabsf(sqrtf(o % o)) - 2.0 } else {  sqrtf(o % o) };
+        let mut o = f + *curve * Vec3::from(-1.0);
+        let temp = if o.x > 0.0 {
+            fabsf(sqrtf(o % o) - 2.0)
+        } else {
+            o.y += if o.y > 0.0 { -2.0 } else { 2.0 };
+            sqrtf(o % o)
+        };
         distance = min(distance, temp);
     }
 
     distance = powf(distance.powi(8) + position.z.powi(8), 0.125) - 0.5;
     *hit_type = HIT_LETTER;
 
-    
     let room_dist = min(
         -min(
             box_test(
@@ -207,24 +201,20 @@ fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
         distance = sun;
         *hit_type = HIT_SUN;
     }
-
-    
     distance
 }
 
 fn ray_marching(origin: Vec3, direction: Vec3, hit_pos: &mut Vec3, hit_norm: &mut Vec3) -> u8 {
-    
     let mut hit_type = HIT_NONE;
     let mut no_hit_count = 0;
-    let mut total_d = 0.0; 
+    let mut total_d = 0.0;
 
     while total_d < 100.0 {
         *hit_pos = origin + direction * total_d.into();
         let d = query_database(*hit_pos, &mut hit_type);
-        
+
         no_hit_count += 1;
         if d < 0.01 || no_hit_count > 99 {
-            
             *hit_norm = !Vec3::new_abc(
                 query_database(*hit_pos + Vec3::new_ab(0.01, 0.0), &mut no_hit_count) - d,
                 query_database(*hit_pos + Vec3::new_ab(0.0, 0.01), &mut no_hit_count) - d,
@@ -245,7 +235,7 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
     let mut attenuation = Vec3::from(1.0);
     let light_direction = !Vec3::new_abc(0.6, 0.6, 1.0);
 
-    for i in (0..3).rev() {
+    for _ in (0..3).rev() {
         let hit_type = ray_marching(origin, direction, &mut sampled_position, &mut normal);
         if hit_type == HIT_NONE {
             break;
@@ -263,13 +253,13 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
             let g = if normal.z < 0.0 { -1.0 } else { 1.0 };
             let u = -1.0 / (g + normal.z);
             let v = normal.x * normal.y * u;
-            
+
             direction = Vec3::new_abc(v, g + normal.y * normal.y * u, -normal.y)
                 * cosf(p).into()
                 * s.into()
                 + Vec3::new_abc(1.0 + g * normal.x * normal.x * u, g * v, -g * normal.x)
                     * (Vec3::from(sinf(p)) * Vec3::from(s))
-                + Vec3::from(normal) * sqrtf(c).into();
+                + normal * sqrtf(c).into();
             origin = sampled_position + direction * Vec3::from(0.1);
             attenuation = attenuation * Vec3::from(0.2);
 
@@ -289,61 +279,81 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
             break;
         }
     }
-
     color
 }
-
 
 fn main() {
     let w = 960.0;
     let h = 540.0;
-    let samples_count = 1;
-    let buffer: &mut [u8;3] = &mut [0, 0, 0];
+    let samples_count = 2;
 
     let position = Vec3::new_abc(-22.0, 5.0, 25.0);
     let goal = !(Vec3::new_abc(-3.0, 4.0, 0.0) + position * Vec3::from(-1.0));
-    let left = !Vec3::new_abc(goal.z, 0.0, -goal.x) * (1.0/w).into();
-    
+    let left = !Vec3::new_abc(goal.z, 0.0, -goal.x) * (1.0 / w).into();
+
     let up = Vec3::new_abc(
-        goal.y * left.z - goal.z * left.y, 
-        goal.z * left.x - goal.x * left.z, 
-        goal.x * left.y - goal.y * left.x
-        );
+        goal.y * left.z - goal.z * left.y,
+        goal.z * left.x - goal.x * left.z,
+        goal.x * left.y - goal.y * left.x,
+    );
 
-        let filename = String::from("output-rust.ppm");
-        println!("Width: = {}, Height: = {}, Samples = {}", w, h, samples_count);
-        println!("Writing data to {}", filename);
+    let filename = String::from("output-rust.ppm");
+    println!(
+        "Width: = {}, Height: = {}, Samples = {}",
+        w, h, samples_count
+    );
+    println!("Writing data to {}", filename);
 
-        let mut file = std::fs::File::create(filename).unwrap();
-        
-        let header: String = format!("P6 {} {} 255 ", w, h);
-        let ascii_header = header.to_ascii_uppercase();
-        file.write_all(ascii_header.as_bytes()).unwrap();
+    let mut file = std::fs::File::create(filename).unwrap();
+    write!(file, "P6 {} {} 255 ", w, h).unwrap();
 
-        let mut pixels: Vec<(f32, f32)> = vec![];
-        for y in (0..h as u64).rev() {
-            for x in (0..w as u64).rev() {
-             pixels.push((y as f32, x as f32));
-            }
-        }
-        
-        let bytes: Vec<u8> = pixels.par_iter().flat_map(|(y,x)| {
-               let mut color = Vec3::from(0.0);
-                for _ in (0..samples_count).rev() {
-                    
-                    color = color + trace(
-                        position, 
-                        !(goal + left * (*x-w/2.0+random_val()).into() + up * (*y-h/2.0+random_val()).into())
-                        );
-                    
-                }
+    // first we create a range iterator over y-coordinates
+    let bytes: Vec<u8> = (0..h as u32)
+        // turn it in to a parallel iterator
+        .into_par_iter()
+        // reverse the order in which we iterate so our picture doesn't end upside down
+        .rev()
+        // mapping each y-coordinate to an iterator ower x-coordinates
+        // then we flatten the result so we don't end up with a Vec of y coordinates
+        // where each element is a Vec of x-coordinates.
+        .flat_map(|y| -> Vec<u8> {
+            // this is our sub-iterator that iterates ower x-coordinates
+            (0..w as u32)
+                // we parallelize this too
+                .into_par_iter()
+                // reverse the order so our picture doesn't end upside down
+                .rev()
+                // again we map this to a sub iterator so we don't end up with a
+                // Vec of y-coordinates, where each element is a Vec of
+                // x-coordinates, that in turn is av Vec of 3 u8 color bytes.
+                // Instead we get a "flattened" result of only u8 color bytes.
+                .flat_map(|x| {
+                    let mut color = Vec3::from(0.0);
+                    for _ in (0..samples_count).rev() {
+                        color = color
+                            + trace(
+                                position,
+                                !(goal
+                                    + left * (x as f32 - w / 2.0 + random_val()).into()
+                                    + up * (y as f32 - h / 2.0 + random_val()).into()),
+                            );
+                    }
 
-                color = color * (1.0 / samples_count as f32).into() + (14.0 / 241.0).into();
-                
-                let o: Vec3 = color + Vec3::from(1.0);
-                color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z) * Vec3::from(255.0);
-                vec![color.x as u8, color.y as u8, color.z as u8]
-        }).collect();
+                    color = color * (1.0 / samples_count as f32).into() + (14.0 / 241.0).into();
 
-        file.write_all(&bytes).unwrap();
+                    let o: Vec3 = color + Vec3::from(1.0);
+                    color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z)
+                        * Vec3::from(255.0);
+                    // we map each iteration of the x-coordinate to this Vec<u8>. Since
+                    // Vec is an iterable our flat_map method wil flatten it out for us
+                    vec![color.x as u8, color.y as u8, color.z as u8]
+                })
+                // we collect this to a Vec<u8> which is iterable so our inner flat_map 
+                // method returns an iterable so the outer flat_map 
+                // can take care of flattening everything for us
+                .collect()
+        })
+        .collect();
+
+    file.write_all(&bytes).unwrap();
 }
