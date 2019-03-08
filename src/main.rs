@@ -4,6 +4,8 @@ use rayon::prelude::*;
 use std::io::Write;
 use std::ops::{Add, Mul, Not, Rem};
 
+const BYTES_PER_PIXEL: usize = 3;
+
 #[derive(Debug, Clone, Copy)]
 struct Vec3 {
     x: f32,
@@ -303,17 +305,17 @@ fn main() {
     let mut file = std::fs::File::create(filename).unwrap();
     write!(file, "P6 {} {} 255 ", w, h).unwrap();
 
-    let width = w as u32;
-    let bytes: Vec<u8> = (0..h as u32 * width)
-        // turn it in to a parallel iterator
+    let mut bytes = vec![0u8; h as usize * w as usize * BYTES_PER_PIXEL];
+    bytes
+        .par_chunks_mut(BYTES_PER_PIXEL)
         .into_par_iter()
-        // reverse the order in which we iterate so our picture doesn't end upside down
         .rev()
-        .flat_map(|idx| {
+        .enumerate()
+        .for_each(|(idx, chunk)| {
             // determine the x- and y-coordinates based on the index in row-major order
             // https://en.wikipedia.org/wiki/Row-major_order
-            let y = (idx / width) as f32;
-            let x = (idx % width) as f32;
+            let y = (idx / w as usize) as f32;
+            let x = (idx % w as usize) as f32;
             let mut color = Vec3::from(0.0);
             for _ in (0..samples_count).rev() {
                 color = color
@@ -331,9 +333,10 @@ fn main() {
             color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z) * Vec3::from(255.0);
             // we map each iteration of the x-coordinate to this Vec<u8>. Since
             // Vec is an iterable our flat_map method wil flatten it out for us
-            vec![color.x as u8, color.y as u8, color.z as u8]
-        })
-        .collect();
+            chunk[0] = color.x as u8;
+            chunk[1] = color.y as u8;
+            chunk[2] = color.z as u8;
+        });
 
     file.write_all(&bytes).unwrap();
 }
