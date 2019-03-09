@@ -306,10 +306,13 @@ fn main() {
 
     let mut bytes = vec![0u8; h as usize * w as usize * BYTES_PER_PIXEL];
     bytes
+        // take mutable chunks of three items
         .par_chunks_mut(BYTES_PER_PIXEL)
+        // Turn this into a parallel iterator using Rayon
         .into_par_iter()
         // reverse the order in which we iterate so our picture doesn't end upside down
         .rev()
+        // enumerate() changes the closure argument from |item| => |(index, item)| tuple
         .enumerate()
         .for_each(|(idx, chunk)| {
             // determine the x- and y-coordinates based on the index in row-major order
@@ -331,8 +334,7 @@ fn main() {
 
             let o: Vec3 = color + Vec3::from(1.0);
             color = Vec3::new_abc(color.x / o.x, color.y / o.y, color.z / o.z) * Vec3::from(255.0);
-            // we map each iteration of the x-coordinate to this Vec<u8>. Since
-            // Vec is an iterable our flat_map method will flatten it out for us
+            // We write the new values to our buffer
             chunk[0] = color.x as u8;
             chunk[1] = color.y as u8;
             chunk[2] = color.z as u8;
