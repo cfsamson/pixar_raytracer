@@ -20,6 +20,7 @@ impl Vec3 {
     }
 }
 
+
 impl Add for Vec3 {
     type Output = Vec3;
     fn add(self, other: Vec3) -> Self {
@@ -117,7 +118,7 @@ const HIT_WALL: u8 = 2;
 const HIT_SUN: u8 = 3;
 
 lazy_static! {
-    static ref LETTER_BLOCKS: Vec<(i32,i32,i32,i32)> = {
+    static ref LETTER_BLOCKS: Vec<(Vec3, Vec3, f32)> = {
         let x: String =  [
                 "5O5_", "5W9W", "5_9_",         // P (without curve)
                 "AOEO", "COC_", "A_E_",         // I
@@ -130,11 +131,17 @@ lazy_static! {
         for i in (0..x.len()).step_by(4) {
             blocks.push((chs[i], chs[i+1], chs[i+2], chs[i+3]))
         }
-        blocks
+
+        blocks.iter().map(|(a, b, c, d)| {
+            let begin = Vec3::new_ab((a - 79) as f32, (b - 79) as f32) * Vec3::from(0.5);
+            let e = Vec3::new_ab((c - 79) as f32, (d - 79) as f32) * Vec3::from(0.5)
+                + begin * Vec3::from(-1.0);
+            (begin, e, e % e)
+        }).collect::<Vec<(Vec3, Vec3, f32)>>()
     };
 
     static ref CURVES: [Vec3; 2] = {
-        [Vec3::new_abc(-11.0, 6.0, 0.0), Vec3::new_abc(11.0, 6.0, 0.0)]
+        [Vec3::new_abc(-11.0, 6.0, 0.0)*Vec3::from(-1.0), Vec3::new_abc(11.0, 6.0, 0.0)* Vec3::from(-1.0)]
     };
 }
 
@@ -143,18 +150,15 @@ fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
     let mut f = position;
     f.z = 0.0;
 
-    for (a, b, c, d) in LETTER_BLOCKS.iter() {
-        let begin = Vec3::new_ab((a - 79) as f32, (b - 79) as f32) * Vec3::from(0.5);
-        let e = Vec3::new_ab((c - 79) as f32, (d - 79) as f32) * Vec3::from(0.5)
-            + begin * Vec3::from(-1.0);
-        let o_part1 = -min((begin + f * Vec3::from(-1.0)) % e / (e % e), 0.0);
-        let o = f + (begin + e * min(o_part1, 1.0).into()) * Vec3::from(-1.0);
+    for (begin, e, e_mod_e) in LETTER_BLOCKS.iter() {
+        let o_part1 = -min((*begin + f * Vec3::from(-1.0)) % *e / e_mod_e, 0.0);
+        let o = f + (*begin + *e * min(o_part1, 1.0).into()) * Vec3::from(-1.0);
         distance = min(distance, o % o);
     }
     distance = sqrtf(distance);
 
     for curve in CURVES.iter().rev() {
-        let mut o = f + *curve * Vec3::from(-1.0);
+        let mut o = f + *curve;
         let temp = if o.x > 0.0 {
             fabsf(sqrtf(o % o) - 2.0)
         } else {
@@ -283,7 +287,7 @@ fn main() {
     let w = 960.0;
     let h = 540.0;
     let samples_count = 2;
-
+    
     let position = Vec3::new_abc(-22.0, 5.0, 25.0);
     let goal = !(Vec3::new_abc(-3.0, 4.0, 0.0) + position * Vec3::from(-1.0));
     let left = !Vec3::new_abc(goal.z, 0.0, -goal.x) * (1.0 / w).into();
@@ -320,6 +324,7 @@ fn main() {
             let y = (idx / w as usize) as f32;
             let x = (idx % w as usize) as f32;
             let mut color = Vec3::from(0.0);
+
             for _ in 0..samples_count {
                 color = color
                     + trace(
