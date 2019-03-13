@@ -1,4 +1,3 @@
-use lazy_static::lazy_static;
 use rand::random;
 use rayon::prelude::*;
 use std::io::Write;
@@ -19,7 +18,6 @@ impl Vec3 {
         Vec3 { x: a, y: b, z: 0.0 }
     }
 }
-
 
 impl Add for Vec3 {
     type Output = Vec3;
@@ -117,47 +115,24 @@ const HIT_LETTER: u8 = 1;
 const HIT_WALL: u8 = 2;
 const HIT_SUN: u8 = 3;
 
-lazy_static! {
-    static ref LETTER_BLOCKS: Vec<(Vec3, Vec3, f32)> = {
-        let x: String =  [
-                "5O5_", "5W9W", "5_9_",         // P (without curve)
-                "AOEO", "COC_", "A_E_",         // I
-                "IOQ_", "I_QO",                 // X
-                "UOY_", "Y_]O", "WW[W",         // A
-                "aOa_", "aWeW", "a_e_", "cWiO"  // R (without curve)
-            ].concat();
-        let mut blocks: Vec<(i32, i32,i32,i32)> = vec![];
-        let chs: Vec<i32> = x.chars().map(|c| c as i32).collect();
-        for i in (0..x.len()).step_by(4) {
-            blocks.push((chs[i], chs[i+1], chs[i+2], chs[i+3]))
-        }
-
-        blocks.iter().map(|(a, b, c, d)| {
-            let begin = Vec3::new_ab((a - 79) as f32, (b - 79) as f32) * Vec3::from(0.5);
-            let e = Vec3::new_ab((c - 79) as f32, (d - 79) as f32) * Vec3::from(0.5)
-                + begin * Vec3::from(-1.0);
-            (begin, e, e % e)
-        }).collect::<Vec<(Vec3, Vec3, f32)>>()
-    };
-
-    static ref CURVES: [Vec3; 2] = {
-        [Vec3::new_abc(-11.0, 6.0, 0.0)*Vec3::from(-1.0), Vec3::new_abc(11.0, 6.0, 0.0)* Vec3::from(-1.0)]
-    };
-}
-
-fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
+fn query_database(
+    letter_blocks: &[(Vec3, Vec3, f32)],
+    curves: &[Vec3; 2],
+    position: Vec3,
+    hit_type: &mut u8,
+) -> f32 {
     let mut distance = std::f32::MAX;
     let mut f = position;
     f.z = 0.0;
 
-    for (begin, e, e_mod_e) in LETTER_BLOCKS.iter() {
+    for (begin, e, e_mod_e) in letter_blocks.iter() {
         let o_part1 = -min((*begin + f * Vec3::from(-1.0)) % *e / e_mod_e, 0.0);
         let o = f + (*begin + *e * min(o_part1, 1.0).into()) * Vec3::from(-1.0);
         distance = min(distance, o % o);
     }
     distance = sqrtf(distance);
 
-    for curve in CURVES.iter().rev() {
+    for curve in curves.iter().rev() {
         let mut o = f + *curve;
         let temp = if o.x > 0.0 {
             fabsf(sqrtf(o % o) - 2.0)
@@ -204,21 +179,43 @@ fn query_database(position: Vec3, hit_type: &mut u8) -> f32 {
     distance
 }
 
-fn ray_marching(origin: Vec3, direction: Vec3, hit_pos: &mut Vec3, hit_norm: &mut Vec3) -> u8 {
+fn ray_marching(
+    letter_blocks: &[(Vec3, Vec3, f32)],
+    curves: &[Vec3; 2],
+    origin: Vec3,
+    direction: Vec3,
+    hit_pos: &mut Vec3,
+    hit_norm: &mut Vec3,
+) -> u8 {
     let mut hit_type = HIT_NONE;
     let mut no_hit_count = 0;
     let mut total_d = 0.0;
 
     while total_d < 100.0 {
         *hit_pos = origin + direction * total_d.into();
-        let d = query_database(*hit_pos, &mut hit_type);
+        let d = query_database(letter_blocks, curves, *hit_pos, &mut hit_type);
 
         no_hit_count += 1;
         if d < 0.01 || no_hit_count > 99 {
             *hit_norm = !Vec3::new_abc(
-                query_database(*hit_pos + Vec3::new_ab(0.01, 0.0), &mut no_hit_count) - d,
-                query_database(*hit_pos + Vec3::new_ab(0.0, 0.01), &mut no_hit_count) - d,
-                query_database(*hit_pos + Vec3::new_abc(0.0, 0.0, 0.01), &mut no_hit_count) - d,
+                query_database(
+                    letter_blocks,
+                    curves,
+                    *hit_pos + Vec3::new_ab(0.01, 0.0),
+                    &mut no_hit_count,
+                ) - d,
+                query_database(
+                    letter_blocks,
+                    curves,
+                    *hit_pos + Vec3::new_ab(0.0, 0.01),
+                    &mut no_hit_count,
+                ) - d,
+                query_database(
+                    letter_blocks,
+                    curves,
+                    *hit_pos + Vec3::new_abc(0.0, 0.0, 0.01),
+                    &mut no_hit_count,
+                ) - d,
             );
 
             return hit_type;
@@ -228,7 +225,12 @@ fn ray_marching(origin: Vec3, direction: Vec3, hit_pos: &mut Vec3, hit_norm: &mu
     0
 }
 
-fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
+fn trace(
+    letter_blocks: &[(Vec3, Vec3, f32)],
+    curves: &[Vec3; 2],
+    mut origin: Vec3,
+    mut direction: Vec3,
+) -> Vec3 {
     let mut sampled_position = Vec3::from(0.0);
     let mut normal = Vec3::from(0.0);
     let mut color = Vec3::from(0.0);
@@ -236,7 +238,14 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
     let light_direction = !Vec3::new_abc(0.6, 0.6, 1.0);
 
     for _ in 0..3 {
-        let hit_type = ray_marching(origin, direction, &mut sampled_position, &mut normal);
+        let hit_type = ray_marching(
+            letter_blocks,
+            curves,
+            origin,
+            direction,
+            &mut sampled_position,
+            &mut normal,
+        );
         if hit_type == HIT_NONE {
             break;
         }
@@ -265,6 +274,8 @@ fn trace(mut origin: Vec3, mut direction: Vec3) -> Vec3 {
 
             if incidence > 0.0
                 && ray_marching(
+                    letter_blocks,
+                    curves,
                     sampled_position + normal * Vec3::from(0.1),
                     light_direction,
                     &mut sampled_position,
@@ -287,7 +298,7 @@ fn main() {
     let w = 960.0;
     let h = 540.0;
     let samples_count = 2;
-    
+
     let position = Vec3::new_abc(-22.0, 5.0, 25.0);
     let goal = !(Vec3::new_abc(-3.0, 4.0, 0.0) + position * Vec3::from(-1.0));
     let left = !Vec3::new_abc(goal.z, 0.0, -goal.x) * (1.0 / w).into();
@@ -308,6 +319,35 @@ fn main() {
     let mut file = std::fs::File::create(filename).unwrap();
     write!(file, "P6 {} {} 255 ", w, h).unwrap();
 
+    let letter_blocks = {
+        let x: String = [
+            "5O5_", "5W9W", "5_9_", // P (without curve)
+            "AOEO", "COC_", "A_E_", // I
+            "IOQ_", "I_QO", // X
+            "UOY_", "Y_]O", "WW[W", // A
+            "aOa_", "aWeW", "a_e_", "cWiO", // R (without curve)
+        ]
+        .concat();
+        let mut blocks: Vec<(i32, i32, i32, i32)> = vec![];
+        let chs: Vec<i32> = x.chars().map(|c| c as i32).collect();
+        for i in (0..x.len()).step_by(4) {
+            blocks.push((chs[i], chs[i + 1], chs[i + 2], chs[i + 3]))
+        }
+
+        blocks
+            .iter()
+            .map(|(a, b, c, d)| {
+                let begin = Vec3::new_ab((a - 79) as f32, (b - 79) as f32) * Vec3::from(0.5);
+                let e = Vec3::new_ab((c - 79) as f32, (d - 79) as f32) * Vec3::from(0.5)
+                    + begin * Vec3::from(-1.0);
+                (begin, e, e % e)
+            })
+            .collect::<Vec<(Vec3, Vec3, f32)>>()
+    };
+    let curves = [
+        Vec3::new_abc(-11.0, 6.0, 0.0) * Vec3::from(-1.0),
+        Vec3::new_abc(11.0, 6.0, 0.0) * Vec3::from(-1.0),
+    ];
     let mut bytes = vec![0u8; h as usize * w as usize * BYTES_PER_PIXEL];
     bytes
         // take mutable chunks of three items
@@ -328,6 +368,8 @@ fn main() {
             for _ in 0..samples_count {
                 color = color
                     + trace(
+                        &letter_blocks,
+                        &curves,
                         position,
                         !(goal
                             + left * (x - w / 2.0 + random_val()).into()
