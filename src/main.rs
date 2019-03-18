@@ -295,13 +295,13 @@ fn trace(
 
 const BYTES_PER_PIXEL: usize = 3;
 fn main() {
-    let w = 960.0;
-    let h = 540.0;
+    let w: usize = 960;
+    let h: usize = 540;
     let samples_count = 2;
 
     let position = Vec3::new_abc(-22.0, 5.0, 25.0);
     let goal = !(Vec3::new_abc(-3.0, 4.0, 0.0) + position * Vec3::from(-1.0));
-    let left = !Vec3::new_abc(goal.z, 0.0, -goal.x) * (1.0 / w).into();
+    let left = !Vec3::new_abc(goal.z, 0.0, -goal.x) * (1.0 / w as f32).into();
 
     let up = Vec3::new_abc(
         goal.y * left.z - goal.z * left.y,
@@ -361,8 +361,8 @@ fn main() {
         .for_each(|(idx, chunk)| {
             // determine the x- and y-coordinates based on the index in row-major order
             // https://en.wikipedia.org/wiki/Row-major_order
-            let y = (idx / w as usize) as f32;
-            let x = (idx % w as usize) as f32;
+            let y = (idx / w ) as usize;
+            let x = (idx % w ) as usize;
             let mut color = Vec3::from(0.0);
 
             for _ in 0..samples_count {
@@ -372,8 +372,8 @@ fn main() {
                         &curves,
                         position,
                         !(goal
-                            + left * (x - w / 2.0 + random_val()).into()
-                            + up * (y - h / 2.0 + random_val()).into()),
+                            + left * ((x - w) as f32 / 2.0 + random_val()).into()
+                            + up * ((y - h) as f32 / 2.0 + random_val()).into()),
                     );
             }
 
